@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Tree display preserves signed integer types and recursively prints tuples, named tuples, vectors, and stopping-condition groups so supported values can be reconstructed with `@algorithm`.
 - `indicates_convergence(::StoppingCriterion, ::StoppingCriterionState)` had its condition inverted, claiming convergence exactly when the criterion had *not* indicated to stop.
 - `indicates_convergence` for `StopWhenAll` and `StopWhenAny` now consults the children that actually indicated to stop.
   Previously a `StopWhenAny` pairing a convergence criterion with a fallback such as `StopAfterIteration` could never report convergence, since the criteria-only variant is `all(indicates_convergence, criteria)`.

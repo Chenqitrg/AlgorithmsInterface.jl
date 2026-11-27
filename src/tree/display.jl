@@ -12,6 +12,84 @@ function _tree_prefixes(prefix::String, is_last::Bool)::Tuple{String, String}
     return prefix * "├─ ", prefix * "│  "
 end
 
+_show_tree_leaf(io::IO, value::Any)::Nothing = _show_tree_leaf(io, value, IdDict())
+
+function _show_tree_leaf(io::IO, value::Any, active::IdDict)::Nothing
+    show(IOContext(io, :compact => false, :limit => false), value)
+    return nothing
+end
+
+function _show_tree_leaf(io::IO, value::Signed, active::IdDict)::Nothing
+    # Ordinary show omits the type of small signed integer values.
+    context = IOContext(io, :compact => false, :limit => false)
+
+    if value isa Int
+        show(context, value)
+    else
+        print(io, _tree_name(typeof(value)), '(')
+        show(context, value)
+        print(io, ')')
+    end
+
+    return nothing
+end
+
+function _show_tree_leaf(io::IO, value::Tuple, active::IdDict)::Nothing
+    print(io, '(')
+
+    for (i, item) in enumerate(value)
+        i > 1 && print(io, ", ")
+        _show_tree_leaf(io, item, active)
+    end
+
+    # The comma distinguishes a singleton tuple from a parenthesized expression.
+    if !isempty(value)
+        print(io, ',')
+    end
+
+    print(io, ')')
+    return nothing
+end
+
+function _show_tree_leaf(io::IO, value::NamedTuple{names, T}, active::IdDict)::Nothing where {names, T}
+    # Keep declared field types, including fields deliberately widened to Any.
+    print(io, "NamedTuple{", repr(names), ", ", repr(T), "}(")
+    _show_tree_leaf(io, Tuple(value), active)
+    print(io, ')')
+
+    return nothing
+end
+
+function _show_tree_leaf(io::IO, value::Vector{T}, active::IdDict)::Nothing where {T}
+    if haskey(active, value)
+        print(io, "<cycle>")
+        return nothing
+    end
+
+    active[value] = nothing
+
+    try
+        _show_tree_leaf(io, T, active)
+        print(io, '[')
+
+        for (i, item) in enumerate(value)
+            i > 1 && print(io, ", ")
+            _show_tree_leaf(io, item, active)
+        end
+
+        print(io, ']')
+    finally
+        delete!(active, value)
+    end
+
+    return nothing
+end
+
+function _show_tree_leaf(io::IO, value::Union{StopWhenAll, StopWhenAny}, active::IdDict)::Nothing
+    print(io, _tree_name(typeof(value)))
+    return _show_tree_leaf(io, value.criteria, active)
+end
+
 function _show_algorithm_tree(
         io::IO, value::Union{Algorithm, StoppingCriterion},
         prefix::String, depth::Int, style::Symbol, active::IdDict
@@ -50,7 +128,7 @@ function _show_algorithm_tree(
                     depth + 1, style, active
                 )
             else
-                show(IOContext(io, :compact => false, :limit => false), child)
+                _show_tree_leaf(io, child, active)
             end
         end
     finally
@@ -67,9 +145,10 @@ Return a string showing the stored fields of `algorithm` as a tree.
 Use `style=:unicode` for tree connectors or `style=:indent` for two-space indentation.
 Other styles throw `ArgumentError`.
 
-Leaf values use ordinary `show` with full precision and no truncation.
-Cycles between algorithms or stopping criteria print as `<cycle>`.
-The output is intended for inspection; it does not preserve every leaf's type.
+The output can be passed to [`@algorithm`](@ref) if the leaf values print as Julia
+expressions and the constructors accept the displayed fields. The named modules
+must be loaded. Constructor type parameters are inferred again; shared references
+are not preserved. Cycles print as `<cycle>` and cannot be reconstructed.
 
 The default `text/plain` display of an `Algorithm` uses this tree. Two-argument
 `show` and compact display keep their usual representation.

@@ -204,8 +204,9 @@ The tree reads stored fields with `getfield`; properties supplied only by
 `getproperty` are not included. Cycles between algorithms or stopping criteria
 print as `<cycle>`, while shared children are shown on each branch.
 
-Leaf values use ordinary `show`, with full precision and no truncation. This
-output is for inspection and does not preserve every leaf's type.
+Leaf printing preserves signed integer types and recurses through tuples, named
+tuples, and vectors. See [Reconstructing a displayed tree](@ref tree-reconstruction)
+for the supported values and limits.
 
 ```@docs
 AlgorithmsInterface.algorithmtree
@@ -306,6 +307,29 @@ AlgorithmsInterface.TreeFieldError
 AlgorithmsInterface.TreeExpressionError
 AlgorithmsInterface.TreeConstructorError
 ```
+
+## [Reconstructing a displayed tree](@id tree-reconstruction)
+
+Ordinary printing can lose types: `Int8(2)` prints as `2`. Tree display keeps the
+constructor for signed integers and applies the same rules inside tuples, named
+tuples, and vectors. Stopping-condition groups print with separate arguments,
+as required by their constructors.
+
+You can edit the output and pass it to `@algorithm` when its leaves are valid Julia
+expressions and its constructors accept the displayed fields. The named modules
+must be loaded. Leaf expressions execute Julia code.
+
+The display has these limits:
+
+- It reads stored fields with `getfield`; properties supplied by `getproperty` are
+  not included.
+- Constructor type parameters are inferred again. Parameters that cannot be
+  recovered from the fields may be lost or prevent reconstruction.
+- Shared references are printed separately. Reconstruction does not preserve
+  their identity. Cycles print as `<cycle>` and cannot be reconstructed.
+- Tuples, named tuples, and vectors use the tree's leaf printer recursively. Other
+  containers use ordinary `show`, which may not preserve every element's type.
+  Values such as closures and open streams generally cannot be reconstructed.
 
 ## Reference: Core interface types & functions
 
