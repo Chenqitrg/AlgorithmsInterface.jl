@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `AlgorithmsInterface.algorithmtree` for displaying nested algorithms with Unicode connectors or two-space indentation.
+- `@algorithm` for constructing nested algorithms and stopping criteria from a literal tree, with line-numbered input errors.
 - `is_active(stopping_criterion, stopping_criterion_state)`, the machine-readable counterpart of `get_reason`, reporting whether a criterion became active during the current run.
   It defaults to reading the state's `at_iteration` and is what the generic convergence reporting is now built on, rather than `!isnothing(get_reason(...))`.
 - `get_active_stopping_criteria`, reporting which criteria became active.
